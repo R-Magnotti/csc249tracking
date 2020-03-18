@@ -66,7 +66,7 @@ class Net(nn.Module):
 
 def train(trainloader, net, optimizer, criterion, epoch=6):
     # TODO: implement the training code here
-
+    #MAKE CHANGES HERE!
 
 
 def test(testloader, net):
