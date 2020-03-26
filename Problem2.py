@@ -98,7 +98,6 @@ def hough(edges):
     img_height = edges.shape[0]
     cos, sin = preFill_radians()
     for r in range(1, np.int(img_width / 4)):
-        sub_acc = {}  # dictionary for individual r values
         print('r value', r)
         for x in range(edges.shape[0]):
             for y in range(edges.shape[1]):
@@ -115,18 +114,15 @@ def hough(edges):
                         ab_str = str(a)+','+str(b)
                         #print(ab_str)
 
-                        if ab_str in sub_acc.keys():
-                            sub_acc[ab_str] += 1
+                        if ab_str in A.keys():
+                            A[ab_str] += 1
                         else:
-                            sub_acc[ab_str] = 1
+                            A[ab_str] = 1
                 else:
                     continue #cont. to next iteration of current loop
-        A[r] = sub_acc
-    return A
-
 def main():
     #load the image
-    img = cv2.imread('/Users/richardmagnotti/PycharmProjects/MVHW3/shoeprint/ueCwZ.png')
+    img = cv2.imread('/Users/richardmagnotti/PycharmProjects/MVHW3/csc249tracking/ueCwZ.png')
     img2 = copy.deepcopy(img)
     cv2.imshow('img1', img)
     cv2.waitKey(0)
