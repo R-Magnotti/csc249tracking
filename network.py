@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch
+import numpy as np
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class DCFNetFeature(nn.Module):
     def __init__(self):
@@ -21,15 +23,15 @@ class DCFNet(nn.Module):
         super(DCFNet, self).__init__()
         self.feature = DCFNetFeature()
         # wf: the fourier transformation of correlation kernel w. You will need to calculate the best wf in update method.
-        self.wf = None
+        self.wf = 0 #need to set equal to 0 by default to avoid Nonetype errors
         # xf: the fourier transformation of target patch x.
-        self.xf = None
+        self.xf = 0
         self.config = config
 
     def forward(self, z):
         """
-        :param z: the multiscale searching patch. Shape (num_scale, 3, crop_sz, crop_sz)
-        :return response: the response of cross correlation. Shape (num_scale, 1, crop_sz, crop_sz)
+        :param z: the multiscale searching patch. Shape (num_scale, 3, height, width)
+        :return response: the response of cross correlation. Shape (num_scale, 1, height, width)
 
         You are required to calculate response using self.wf to do cross correlation on the searching patch z
         """
@@ -37,9 +39,17 @@ class DCFNet(nn.Module):
         z = self.feature(z) * self.config.cos_window
         # TODO: You are required to calculate response using self.wf to do cross correlation on the searching patch z
         # put your code here
-
-
-
+        response = torch.zeros([z.size()[0], 1, z.size()[2], z.size()[3]])
+        for scale in range(z.size()[0]):
+            g_tmp = 0
+            for channel in range(z.size()[1]):
+                #conjugate
+                w_conj = self.wf.clone()
+                w_conj[0, channel, :, :, 1] = w_conj[0, channel, :, :, 1] * (-1)
+                
+                g_arg = w_conj[0, channel].to(device)*torch.rfft(z[scale, channel], 2).to(device)
+                g_tmp += g_arg
+            response[scale, 0] = (torch.irfft(g_tmp, 2))
         return response
 
     def update(self, x, lr=1.0):
@@ -63,9 +73,41 @@ class DCFNet(nn.Module):
         x = self.feature(x) * self.config.cos_window
         # TODO: calculate self.xf and self.wf
         # put your code here
+        self.xf = ((1 - lr)*self.xf) + (lr*(torch.rfft(x, 3).data))
+        self.xf.detach()
+        #conjugate
+        y_conj = self.config.yf.clone()
+        y_conj[:, :, :, :, 1] = y_conj[:, :, :, :, 1] * (-1)
 
+        denom = 0
+        
+        W = torch.zeros(self.xf.size()) #empty array to hold w_l values
+        #this portion to calculate the denominator
+        for channel in range(x.size()[1]):
+            x_forier = torch.rfft(x[0, channel], 2)
 
+            #find conjugate by 
+            x_conj = x_forier.clone()  
+            x_conj[:,:,1] = x_conj[:,:,1] * (-1)
 
+            denom += torch.rfft(x[0, channel], 2) * x_conj + self.config.lambda0
+        
+        for channel in range(x.size()[1]):
+            numerator = torch.rfft(x[0, channel], 2)*self.config.yf
+            w_l = numerator/denom
+
+            W[0, channel] = w_l #to make output 5 dimensional
+
+        #learning rate for all w_l
+        self.wf = ((1-lr)*self.wf) + (lr*W.data)
+        self.wf.detach()
+
+        '''
+        taking the CC here works as follows:
+            because the last dimension of each matrix we are tasked with finding the CC of has a last dimension in its shape corresponding to the real-valued layer (0th layer) and 
+            complex-valued layer (1st layer), we can leave the first layer A[0, channel_num, : (height), : (width), real] the same and multiply the 
+            second layer A[0, channel_num, :, :, complex] by (-1) in order to effectively accomplish a complex conjugation  
+        '''
 
     def load_param(self, path='param.pth'):
         checkpoint = torch.load(path)

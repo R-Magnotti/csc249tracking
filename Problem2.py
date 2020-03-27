@@ -29,7 +29,7 @@ def findMax(A):
     for r in range(A.shape[0]):
         for a in range(A.shape[1]):
             for b in range(A.shape[2]):
-                max_val = np.max(A[r, a: a + 20, b: b + 20])
+                max_val = np.max(A[r, a: a + 50, b: b + 50])
                 max_list.append(max_val)
     max_list = list(set(max_list))
 
@@ -38,7 +38,7 @@ def findMax(A):
         indicating it is very likely true circle. 
     '''
     max_fin = []
-    Q3 = np.percentile(max_list, 85, interpolation='midpoint')
+    Q3 = np.percentile(max_list, 90, interpolation='midpoint')
     for value in max_list:
         if value > Q3:
             max_fin.append(value)
@@ -58,7 +58,6 @@ def findMax(A):
     '''
     index_list = list(index_list)
     new_index_list = copy.deepcopy(index_list)
-    print('before ', index_list)
 
     for i in range(len(new_index_list)):
         for j in range(i, len(new_index_list)):
@@ -72,7 +71,6 @@ def findMax(A):
                 except:
                     continue
 
-    print('after ', index_list)
     return index_list
 
 '''
@@ -134,12 +132,12 @@ def hough(edges, a_bin_list, b_bin_list):
     img_diag = np.int(np.floor(np.sqrt(np.square(img_height) + np.square(img_width))))
     cos, sin = preFill_radians()
     #accumulator
-    A = np.zeros((50, img_width, img_height), dtype=int)
+    A = np.zeros((img_diag, img_width, img_height), dtype=int)
     print('size here ', A.shape)
 
     #make all data into 3d array for binning, matrix(r, a, b)
     #accumulator = np.zeros((20, img_height, img_width), dtype=int)
-    for r in range(1, 50):
+    for r in range(1, img_diag):
         print('r value', r)
         for x in range(edges.shape[0]):
             for y in range(edges.shape[1]):
@@ -164,13 +162,13 @@ def hough(edges, a_bin_list, b_bin_list):
 
 def main():
     #load the image
-    img = cv2.imread('/Users/richardmagnotti/PycharmProjects/MVHW3/csc249tracking/ueCwZ.png')
+    img = cv2.imread('/Users/richardmagnotti/PycharmProjects/MVHW3/csc249tracking/circle.png')
     img2 = copy.deepcopy(img)
     cv2.imshow('img1', img)
     cv2.waitKey(0)
     
     #running median filter over image to get rid of noisy/unnecessary edges
-    img2 = cv2.medianBlur(img2, 5)
+    img2 = cv2.medianBlur(img2, 7)
 
     #detect edges w/ Canny
     edges = cv2.Canny(img2, 120, 180)
@@ -178,13 +176,13 @@ def main():
     cv2.imshow('imgCanny', edges)
     cv2.waitKey(0)
 
-    #generate a and b bins
+    #generate a and b bins of your choice of size
     a_bin_list = []
     b_bin_list = []
-    for i in range(0, img.shape[1], 50):
+    for i in range(0, img.shape[1], 15):
         a_bin_list.append(i)
 
-    for i in range(0, img.shape[0], 50):
+    for i in range(0, img.shape[0], 15):
         b_bin_list.append(i)
 
     #perform Hough transform

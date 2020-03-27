@@ -66,8 +66,26 @@ class Net(nn.Module):
 
 def train(trainloader, net, optimizer, criterion, epoch=6):
     # TODO: implement the training code here
-    #MAKE CHANGES HERE!
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    net.to(device)
+    for k in range(epoch):
+        running_loss = 0.0
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data[0].to(device), data[1].to(device)
 
+            optimizer.zero_grad()
+
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+            if i%2000 == 1999:
+                print('[%d, %5d] loss: %.3f' %
+                        (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
+    print('Finished Training')
 
 def test(testloader, net):
     # test over whole dataset
